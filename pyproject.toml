@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zenlink-mcp"
+version = "1.0.0"
+description = "MCP server for browser automation via ZenLink - gives Claude Desktop and other MCP clients native browser control."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Jay-Quan", email = "jayquanmccleary@gmail.com" }
+]
+keywords = ["mcp", "browser", "automation", "zenlink", "claude", "zen-browser", "firefox"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Internet :: WWW/HTTP :: Browsers",
+]
+dependencies = [
+    "mcp[cli]>=1.2.0",
+    "httpx>=0.27.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/JayQuan-McCleary/ZenLink-MCP"
+Repository = "https://github.com/JayQuan-McCleary/ZenLink-MCP"
+Issues = "https://github.com/JayQuan-McCleary/ZenLink-MCP/issues"
+"ZenLink Bridge" = "https://github.com/JayQuan-McCleary/ZenLink"
+
+[project.scripts]
+zenlink-mcp = "zenlink_mcp.server:main"

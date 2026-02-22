@@ -230,5 +230,10 @@ def zen_batch(commands: list[dict]) -> dict:
     return _post("/api/batch", {"commands": commands})
 
 
-if __name__ == "__main__":
+def main():
+    """Entry point for the ZenLink MCP server."""
     mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()

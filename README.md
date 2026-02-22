@@ -1,23 +1,24 @@
 # ZenLink-MCP
 
-MCP server that gives Claude Desktop (and other MCP clients) native browser control through [ZenLink](https://github.com/JayQuan-McCleary/ZenLink).
+MCP server that gives Claude Desktop (and any MCP client) native browser control through [ZenLink](https://github.com/JayQuan-McCleary/ZenLink).
 
-Instead of Claude running shell commands to talk to ZenLink, this makes every ZenLink action a **native tool** — faster, cleaner, no shell overhead.
+Instead of shell commands and HTTP calls, every ZenLink action becomes a **native tool** - faster, cleaner, no overhead.
 
 ## Prerequisites
 
 - [ZenLink](https://github.com/JayQuan-McCleary/ZenLink) installed and bridge running (`python native/bridge.py`)
+- Zen Browser or Firefox with the ZenLink extension loaded
 - Python 3.10+
 
 ## Install
 
 ```bash
-pip install "mcp[cli]" httpx
+pip install zenlink-mcp
 ```
 
 ## Setup for Claude Desktop
 
-Add to your Claude Desktop config:
+Add to your config file:
 
 **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 **Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -26,32 +27,44 @@ Add to your Claude Desktop config:
 {
   "mcpServers": {
     "zenlink": {
-      "command": "python",
-      "args": ["D:\\ZenLink-MCP\\server.py"]
+      "command": "zenlink-mcp"
     }
   }
 }
 ```
 
-Replace the path with wherever you cloned this repo. Restart Claude Desktop.
+Restart Claude Desktop. ZenLink tools will appear in the tools menu.
+
+### Alternative (run from source)
+
+```json
+{
+  "mcpServers": {
+    "zenlink": {
+      "command": "python",
+      "args": ["/path/to/ZenLink-MCP/src/zenlink_mcp/server.py"]
+    }
+  }
+}
+```
 
 ## How It Works
 
 ```
-Claude Desktop
-    ¦
-    ¦  MCP (stdio) — native tool calls
+Claude Desktop / Any MCP Client
+    -
+    -  MCP (stdio) - native tool calls
     ?
 ZenLink-MCP (this server)
-    ¦
-    ¦  HTTP to localhost:8765
+    -
+    -  HTTP to localhost:8765
     ?
 ZenLink Bridge ? Browser Extension ? Web Page
 ```
 
-Claude sees `zen_navigate`, `zen_click`, `zen_fill`, etc. as first-class tools — same as file creation or web search. No PowerShell, no curl, no shell spawning.
+No shell spawning. No curl. Just direct tool calls returning clean JSON.
 
-## Available Tools
+## Available Tools (22)
 
 ### Reading
 | Tool | Description |
@@ -89,23 +102,23 @@ Claude sees `zen_navigate`, `zen_click`, `zen_fill`, etc. as first-class tools —
 | `zen_highlight(selector)` | Visual overlay on element |
 | `zen_batch(commands)` | Multiple commands in one call |
 
-## Example Conversation
+## Example
 
-**You:** "Open Wikipedia and find the article about ducks"
+**You:** "Open Wikipedia and search for ducks"
 
-**Claude uses:**
-1. `zen_navigate("https://en.wikipedia.org")` 
+**Claude calls:**
+1. `zen_navigate("https://en.wikipedia.org")`
 2. `zen_fill("#searchInput", "Duck")`
 3. `zen_click("#searchButton")`
 4. `zen_page_text()` ? reads the article
 
-No shell commands visible. Just native tool calls.
+No shell commands. Just native tool calls.
 
 ## Why separate from ZenLink?
 
-**ZenLink** is the universal HTTP bridge — works with any language, any tool, any AI.
+**[ZenLink](https://github.com/JayQuan-McCleary/ZenLink)** is the universal HTTP bridge - works with any language, any tool, any AI.
 
-**ZenLink-MCP** is the Claude-specific wrapper. Keeping them separate means:
+**ZenLink-MCP** is the MCP wrapper. Keeping them separate means:
 - ZenLink stays clean and universal
 - MCP users get a focused, easy setup
 - Updates to either don't break the other
