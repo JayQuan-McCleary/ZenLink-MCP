@@ -1,128 +1,154 @@
-# ZenLink-MCP
+<!-- mcp-name: io.github.JayQuan-McCleary/zenlink-mcp -->
+# MCP Registry
 
-MCP server that gives Claude Desktop (and any MCP client) native browser control through [ZenLink](https://github.com/JayQuan-McCleary/ZenLink).
+The MCP registry provides MCP clients with a list of MCP servers, like an app store for MCP servers.
 
-Instead of shell commands and HTTP calls, every ZenLink action becomes a **native tool** - faster, cleaner, no overhead.
+[**📤 Publish my MCP server**](docs/modelcontextprotocol-io/quickstart.mdx) | [**⚡️ Live API docs**](https://registry.modelcontextprotocol.io/docs) | [**👀 Ecosystem vision**](docs/design/ecosystem-vision.md) | 📖 **[Full documentation](./docs)**
 
-## Prerequisites
+## Development Status
 
-- [ZenLink](https://github.com/JayQuan-McCleary/ZenLink) installed and bridge running (`python native/bridge.py`)
-- Zen Browser or Firefox with the ZenLink extension loaded
-- Python 3.10+
+**2025-10-24 update**: The Registry API has entered an **API freeze (v0.1)** 🎉. For the next month or more, the API will remain stable with no breaking changes, allowing integrators to confidently implement support. This freeze applies to v0.1 while development continues on v0. We'll use this period to validate the API in real-world integrations and gather feedback to shape v1 for general availability. Thank you to everyone for your contributions and patience—your involvement has been key to getting us here!
 
-## Install
+**2025-09-08 update**: The registry has launched in preview 🎉 ([announcement blog post](https://blog.modelcontextprotocol.io/posts/2025-09-08-mcp-registry-preview/)). While the system is now more stable, this is still a preview release and breaking changes or data resets may occur. A general availability (GA) release will follow later. We'd love your feedback in [GitHub discussions](https://github.com/modelcontextprotocol/registry/discussions/new?category=ideas) or in the [#registry-dev Discord](https://discord.com/channels/1358869848138059966/1369487942862504016) ([joining details here](https://modelcontextprotocol.io/community/communication)).
+
+Current key maintainers:
+- **Adam Jones** (Anthropic) [@domdomegg](https://github.com/domdomegg)  
+- **Tadas Antanavicius** (PulseMCP) [@tadasant](https://github.com/tadasant)
+- **Toby Padilla** (GitHub) [@toby](https://github.com/toby)
+- **Radoslav (Rado) Dimitrov** (Stacklok) [@rdimitrov](https://github.com/rdimitrov)
+
+## Contributing
+
+We use multiple channels for collaboration - see [modelcontextprotocol.io/community/communication](https://modelcontextprotocol.io/community/communication).
+
+Often (but not always) ideas flow through this pipeline:
+
+- **[Discord](https://modelcontextprotocol.io/community/communication)** - Real-time community discussions
+- **[Discussions](https://github.com/modelcontextprotocol/registry/discussions)** - Propose and discuss product/technical requirements
+- **[Issues](https://github.com/modelcontextprotocol/registry/issues)** - Track well-scoped technical work  
+- **[Pull Requests](https://github.com/modelcontextprotocol/registry/pulls)** - Contribute work towards issues
+
+### Quick start:
+
+#### Pre-requisites
+
+- **Docker**
+- **Go 1.24.x**
+- **ko** - Container image builder for Go ([installation instructions](https://ko.build/install/))
+- **golangci-lint v2.4.0**
+
+#### Running the server
 
 ```bash
-pip install zenlink-mcp
+# Start full development environment
+make dev-compose
 ```
 
-## Setup for Claude Desktop
+This starts the registry at [`localhost:8080`](http://localhost:8080) with PostgreSQL. The database uses ephemeral storage and is reset each time you restart the containers, ensuring a clean state for development and testing.
 
-Add to your config file:
+**Note:** The registry uses [ko](https://ko.build) to build container images. The `make dev-compose` command automatically builds the registry image with ko and loads it into your local Docker daemon before starting the services.
 
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-**Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+By default, the registry seeds from the production API with a filtered subset of servers (to keep startup fast). This ensures your local environment mirrors production behavior and all seed data passes validation. For offline development you can seed from a file without validation with `MCP_REGISTRY_SEED_FROM=data/seed.json MCP_REGISTRY_ENABLE_REGISTRY_VALIDATION=false make dev-compose`.
 
-```json
-{
-  "mcpServers": {
-    "zenlink": {
-      "command": "zenlink-mcp"
-    }
-  }
-}
+The setup can be configured with environment variables in [docker-compose.yml](./docker-compose.yml) - see [.env.example](./.env.example) for a reference.
+
+<details>
+<summary>Alternative: Running a pre-built Docker image</summary>
+
+Pre-built Docker images are automatically published to GitHub Container Registry:
+
+```bash
+# Run latest stable release
+docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:latest
+
+# Run latest from main branch (continuous deployment)
+docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:main
+
+# Run specific release version
+docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:v1.0.0
+
+# Run development build from main branch
+docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:main-20250906-abc123d
 ```
 
-Restart Claude Desktop. ZenLink tools will appear in the tools menu.
+**Available tags:** 
+- **Releases**: `latest`, `v1.0.0`, `v1.1.0`, etc.
+- **Continuous**: `main` (latest main branch build)
+- **Development**: `main-<date>-<sha>` (specific commit builds)
 
-### Alternative (run from source)
+</details>
 
-```json
-{
-  "mcpServers": {
-    "zenlink": {
-      "command": "python",
-      "args": ["/path/to/ZenLink-MCP/src/zenlink_mcp/server.py"]
-    }
-  }
-}
+#### Publishing a server
+
+To publish a server, we've built a simple CLI. You can use it with:
+
+```bash
+# Build the latest CLI
+make publisher
+
+# Use it!
+./bin/mcp-publisher --help
 ```
 
-## How It Works
+See [the publisher guide](./docs/modelcontextprotocol-io/quickstart.mdx) for more details.
 
-```
-Claude Desktop / Any MCP Client
-    -
-    -  MCP (stdio) - native tool calls
-    ?
-ZenLink-MCP (this server)
-    -
-    -  HTTP to localhost:8765
-    ?
-ZenLink Bridge ? Browser Extension ? Web Page
+#### Other commands
+
+```bash
+# Run lint, unit tests and integration tests
+make check
 ```
 
-No shell spawning. No curl. Just direct tool calls returning clean JSON.
+There are also a few more helpful commands for development. Run `make help` to learn more, or look in [Makefile](./Makefile).
 
-## Available Tools (22)
+<!--
+For Claude and other AI tools: Always prefer make targets over custom commands where possible.
+-->
 
-### Reading
-| Tool | Description |
-|------|-------------|
-| `zen_status` | Check bridge + extension connection |
-| `zen_tabs` | List all open tabs with IDs |
-| `zen_page_info` | URL, title, dimensions, scroll position |
-| `zen_page_text` | Extract readable text from page |
-| `zen_forms` | All form fields with labels and values |
-| `zen_dom` | Accessibility tree |
-| `zen_screenshot` | Capture viewport as PNG |
+## Architecture
 
-### Navigation
-| Tool | Description |
-|------|-------------|
-| `zen_navigate(url)` | Load URL in active tab |
-| `zen_new_tab(url)` | Open new tab |
-| `zen_close_tab(tab_id)` | Close tab by ID |
-| `zen_switch_tab(tab_id)` | Focus a tab |
+### Project Structure
 
-### Interaction
-| Tool | Description |
-|------|-------------|
-| `zen_click(selector, x, y)` | Click by selector or coordinates |
-| `zen_type(selector, text, clear)` | Type into input |
-| `zen_fill(selector, value)` | Set form field value |
-| `zen_scroll(direction, amount)` | Scroll page |
-| `zen_hover(selector)` | Hover over element |
+```
+├── cmd/                     # Application entry points
+│   └── publisher/           # Server publishing tool
+├── data/                    # Seed data
+├── deploy/                  # Deployment configuration (Pulumi)
+├── docs/                    # Documentation
+├── internal/                # Private application code
+│   ├── api/                 # HTTP handlers and routing
+│   ├── auth/                # Authentication (GitHub OAuth, JWT, namespace blocking)
+│   ├── config/              # Configuration management
+│   ├── database/            # Data persistence (PostgreSQL)
+│   ├── service/             # Business logic
+│   ├── telemetry/           # Metrics and monitoring
+│   └── validators/          # Input validation
+├── pkg/                     # Public packages
+│   ├── api/                 # API types and structures
+│   │   └── v0/              # Version 0 API types
+│   └── model/               # Data models for server.json
+├── scripts/                 # Development and testing scripts
+├── tests/                   # Integration tests
+└── tools/                   # CLI tools and utilities
+    └── validate-*.sh        # Schema validation tools
+```
 
-### Smart Queries
-| Tool | Description |
-|------|-------------|
-| `zen_find(query)` | Find elements by natural language |
-| `zen_js(code)` | Execute JavaScript in page context |
-| `zen_highlight(selector)` | Visual overlay on element |
-| `zen_batch(commands)` | Multiple commands in one call |
+### Authentication
 
-## Example
+Publishing supports multiple authentication methods:
+- **GitHub OAuth** - For publishing by logging into GitHub
+- **GitHub OIDC** - For publishing from GitHub Actions
+- **DNS verification** - For proving ownership of a domain and its subdomains
+- **HTTP verification** - For proving ownership of a domain
 
-**You:** "Open Wikipedia and search for ducks"
+The registry validates namespace ownership when publishing. E.g. to publish...:
+- `io.github.domdomegg/my-cool-mcp` you must login to GitHub as `domdomegg`, or be in a GitHub Action on domdomegg's repos
+- `me.adamjones/my-cool-mcp` you must prove ownership of `adamjones.me` via DNS or HTTP challenge
 
-**Claude calls:**
-1. `zen_navigate("https://en.wikipedia.org")`
-2. `zen_fill("#searchInput", "Duck")`
-3. `zen_click("#searchButton")`
-4. `zen_page_text()` ? reads the article
+## Community Projects
 
-No shell commands. Just native tool calls.
+Check out [community projects](docs/community-projects.md) to explore notable registry-related work created by the community.
 
-## Why separate from ZenLink?
+## More documentation
 
-**[ZenLink](https://github.com/JayQuan-McCleary/ZenLink)** is the universal HTTP bridge - works with any language, any tool, any AI.
-
-**ZenLink-MCP** is the MCP wrapper. Keeping them separate means:
-- ZenLink stays clean and universal
-- MCP users get a focused, easy setup
-- Updates to either don't break the other
-
-## License
-
-MIT
+See the [documentation](./docs) for more details if your question has not been answered here!

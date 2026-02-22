@@ -6,3 +6,6 @@ dist/
 build/
 .env
 .venv/
+.mcpregistry_*
+mcp-publisher*
+server.json
