@@ -1,154 +1,99 @@
-<!-- mcp-name: io.github.JayQuan-McCleary/zenlink-mcp -->
-# MCP Registry
+# ZenLink MCP
 
-The MCP registry provides MCP clients with a list of MCP servers, like an app store for MCP servers.
+MCP server for browser automation via ZenLink — gives Claude Desktop and other MCP clients native browser control through Zen Browser (Firefox-based).
 
-[**📤 Publish my MCP server**](docs/modelcontextprotocol-io/quickstart.mdx) | [**⚡️ Live API docs**](https://registry.modelcontextprotocol.io/docs) | [**👀 Ecosystem vision**](docs/design/ecosystem-vision.md) | 📖 **[Full documentation](./docs)**
-
-## Development Status
-
-**2025-10-24 update**: The Registry API has entered an **API freeze (v0.1)** 🎉. For the next month or more, the API will remain stable with no breaking changes, allowing integrators to confidently implement support. This freeze applies to v0.1 while development continues on v0. We'll use this period to validate the API in real-world integrations and gather feedback to shape v1 for general availability. Thank you to everyone for your contributions and patience—your involvement has been key to getting us here!
-
-**2025-09-08 update**: The registry has launched in preview 🎉 ([announcement blog post](https://blog.modelcontextprotocol.io/posts/2025-09-08-mcp-registry-preview/)). While the system is now more stable, this is still a preview release and breaking changes or data resets may occur. A general availability (GA) release will follow later. We'd love your feedback in [GitHub discussions](https://github.com/modelcontextprotocol/registry/discussions/new?category=ideas) or in the [#registry-dev Discord](https://discord.com/channels/1358869848138059966/1369487942862504016) ([joining details here](https://modelcontextprotocol.io/community/communication)).
-
-Current key maintainers:
-- **Adam Jones** (Anthropic) [@domdomegg](https://github.com/domdomegg)  
-- **Tadas Antanavicius** (PulseMCP) [@tadasant](https://github.com/tadasant)
-- **Toby Padilla** (GitHub) [@toby](https://github.com/toby)
-- **Radoslav (Rado) Dimitrov** (Stacklok) [@rdimitrov](https://github.com/rdimitrov)
-
-## Contributing
-
-We use multiple channels for collaboration - see [modelcontextprotocol.io/community/communication](https://modelcontextprotocol.io/community/communication).
-
-Often (but not always) ideas flow through this pipeline:
-
-- **[Discord](https://modelcontextprotocol.io/community/communication)** - Real-time community discussions
-- **[Discussions](https://github.com/modelcontextprotocol/registry/discussions)** - Propose and discuss product/technical requirements
-- **[Issues](https://github.com/modelcontextprotocol/registry/issues)** - Track well-scoped technical work  
-- **[Pull Requests](https://github.com/modelcontextprotocol/registry/pulls)** - Contribute work towards issues
-
-### Quick start:
-
-#### Pre-requisites
-
-- **Docker**
-- **Go 1.24.x**
-- **ko** - Container image builder for Go ([installation instructions](https://ko.build/install/))
-- **golangci-lint v2.4.0**
-
-#### Running the server
+## Installation
 
 ```bash
-# Start full development environment
-make dev-compose
+pip install zenlink-mcp
 ```
 
-This starts the registry at [`localhost:8080`](http://localhost:8080) with PostgreSQL. The database uses ephemeral storage and is reset each time you restart the containers, ensuring a clean state for development and testing.
+## Requirements
 
-**Note:** The registry uses [ko](https://ko.build) to build container images. The `make dev-compose` command automatically builds the registry image with ko and loads it into your local Docker daemon before starting the services.
+- [ZenLink browser extension](https://github.com/JayQuan-McCleary/ZenLink) installed in Zen Browser
+- ZenLink bridge running (`python native/bridge.py`)
 
-By default, the registry seeds from the production API with a filtered subset of servers (to keep startup fast). This ensures your local environment mirrors production behavior and all seed data passes validation. For offline development you can seed from a file without validation with `MCP_REGISTRY_SEED_FROM=data/seed.json MCP_REGISTRY_ENABLE_REGISTRY_VALIDATION=false make dev-compose`.
+## Tools
 
-The setup can be configured with environment variables in [docker-compose.yml](./docker-compose.yml) - see [.env.example](./.env.example) for a reference.
+| Tool | Description |
+|------|-------------|
+| `zen_status` | Check if ZenLink bridge and extension are connected |
+| `zen_navigate` | Navigate to a URL |
+| `zen_page_text` | Extract all readable text from the current page |
+| `zen_page_info` | Get page URL, title, dimensions, scroll position |
+| `zen_tabs` | List all open browser tabs |
+| `zen_new_tab` | Open a new tab |
+| `zen_close_tab` | Close a tab by ID |
+| `zen_switch_tab` | Switch to a tab by ID |
+| `zen_click` | Click an element by CSS selector or coordinates |
+| `zen_type` | Type text into an input field |
+| `zen_fill` | Set a form field value directly (faster than typing) |
+| `zen_scroll` | Scroll the page |
+| `zen_hover` | Hover over an element |
+| `zen_find` | Find elements using natural language |
+| `zen_js` | Execute JavaScript in the page context |
+| `zen_highlight` | Highlight an element with a visual overlay |
+| `zen_screenshot` | Capture a screenshot |
+| `zen_dom` | Get the accessibility tree of interactive elements |
+| `zen_forms` | Get all form fields with labels and values |
+| `zen_wait_for_element` | Wait for a CSS selector to appear (replaces fixed sleep timers) |
+| `zen_wp_html` | Extract HTML widget content from a WordPress Elementor page |
+| `zen_batch` | Run multiple commands in a single request for speed |
 
-<details>
-<summary>Alternative: Running a pre-built Docker image</summary>
+### `zen_wait_for_element`
 
-Pre-built Docker images are automatically published to GitHub Container Registry:
+Waits for a CSS selector to appear and become visible on the page. Returns immediately when found rather than sleeping a fixed duration — use this instead of `sleep` when waiting for dynamic/JS-rendered content.
 
-```bash
-# Run latest stable release
-docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:latest
-
-# Run latest from main branch (continuous deployment)
-docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:main
-
-# Run specific release version
-docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:v1.0.0
-
-# Run development build from main branch
-docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:main-20250906-abc123d
+```json
+{"action": "waitForElement", "selector": ".tracking-events", "timeout": 10000}
 ```
 
-**Available tags:** 
-- **Releases**: `latest`, `v1.0.0`, `v1.1.0`, etc.
-- **Continuous**: `main` (latest main branch build)
-- **Development**: `main-<date>-<sha>` (specific commit builds)
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `selector` | string | required | CSS selector to wait for |
+| `timeout` | int | 10000 | Max wait time in milliseconds |
+| `poll_interval` | int | 200 | How often to check in milliseconds |
 
-</details>
+Returns `{ ok: true, found: true, elapsed: 342, ref: "r12", tag: "div" }` on success, or `{ ok: false, found: false, error: "Timed out after 10000ms" }` on timeout.
 
-#### Publishing a server
+### `zen_batch`
 
-To publish a server, we've built a simple CLI. You can use it with:
+Run multiple commands in one request. Supports all actions including `waitForElement` and `sleep`:
 
-```bash
-# Build the latest CLI
-make publisher
-
-# Use it!
-./bin/mcp-publisher --help
+```json
+[
+  {"action": "navigate", "url": "https://example.com"},
+  {"action": "waitForElement", "selector": ".results", "timeout": 8000},
+  {"action": "pageText"}
+]
 ```
 
-See [the publisher guide](./docs/modelcontextprotocol-io/quickstart.mdx) for more details.
+## Claude Desktop Setup
 
-#### Other commands
+Add to your `claude_desktop_config.json`:
 
-```bash
-# Run lint, unit tests and integration tests
-make check
+```json
+{
+  "mcpServers": {
+    "zenlink": {
+      "command": "zenlink-mcp"
+    }
+  }
+}
 ```
 
-There are also a few more helpful commands for development. Run `make help` to learn more, or look in [Makefile](./Makefile).
+## Changelog
 
-<!--
-For Claude and other AI tools: Always prefer make targets over custom commands where possible.
--->
+### 1.1.0
+- Added `zen_wait_for_element` tool — polls DOM until selector appears instead of fixed sleep timers
+- Added `waitForElement` as a batch action
+- Bridge: new `/api/wait-for-element` endpoint with auto-extended timeout
+- Content script bumped to v6
 
-## Architecture
+### 1.0.3
+- Initial public release
 
-### Project Structure
+## Links
 
-```
-├── cmd/                     # Application entry points
-│   └── publisher/           # Server publishing tool
-├── data/                    # Seed data
-├── deploy/                  # Deployment configuration (Pulumi)
-├── docs/                    # Documentation
-├── internal/                # Private application code
-│   ├── api/                 # HTTP handlers and routing
-│   ├── auth/                # Authentication (GitHub OAuth, JWT, namespace blocking)
-│   ├── config/              # Configuration management
-│   ├── database/            # Data persistence (PostgreSQL)
-│   ├── service/             # Business logic
-│   ├── telemetry/           # Metrics and monitoring
-│   └── validators/          # Input validation
-├── pkg/                     # Public packages
-│   ├── api/                 # API types and structures
-│   │   └── v0/              # Version 0 API types
-│   └── model/               # Data models for server.json
-├── scripts/                 # Development and testing scripts
-├── tests/                   # Integration tests
-└── tools/                   # CLI tools and utilities
-    └── validate-*.sh        # Schema validation tools
-```
-
-### Authentication
-
-Publishing supports multiple authentication methods:
-- **GitHub OAuth** - For publishing by logging into GitHub
-- **GitHub OIDC** - For publishing from GitHub Actions
-- **DNS verification** - For proving ownership of a domain and its subdomains
-- **HTTP verification** - For proving ownership of a domain
-
-The registry validates namespace ownership when publishing. E.g. to publish...:
-- `io.github.domdomegg/my-cool-mcp` you must login to GitHub as `domdomegg`, or be in a GitHub Action on domdomegg's repos
-- `me.adamjones/my-cool-mcp` you must prove ownership of `adamjones.me` via DNS or HTTP challenge
-
-## Community Projects
-
-Check out [community projects](docs/community-projects.md) to explore notable registry-related work created by the community.
-
-## More documentation
-
-See the [documentation](./docs) for more details if your question has not been answered here!
+- [ZenLink Bridge & Extension](https://github.com/JayQuan-McCleary/ZenLink)
+- [MCP Registry](https://registry.modelcontextprotocol.io)

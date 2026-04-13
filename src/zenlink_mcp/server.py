@@ -24,10 +24,10 @@ def _get(endpoint: str) -> dict:
         return {"error": str(e)}
 
 
-def _post(endpoint: str, data: dict) -> dict:
+def _post(endpoint: str, data: dict, timeout: float = 15) -> dict:
     """POST request to bridge."""
     try:
-        r = httpx.post(f"{BRIDGE}{endpoint}", json=data, timeout=15)
+        r = httpx.post(f"{BRIDGE}{endpoint}", json=data, timeout=timeout)
         return r.json()
     except httpx.ConnectError:
         return {"error": "ZenLink bridge not running. Start it with: python native/bridge.py"}
@@ -59,6 +59,18 @@ def zen_page_info() -> dict:
 def zen_page_text() -> dict:
     """Extract all readable text from the current page."""
     return _get("/api/page-text")
+
+
+@mcp.tool()
+def zen_page_text_by_tab_id(tab_id: int) -> dict:
+    """Get page text from a specific tab by ID without switching to it.
+    
+    Args:
+        tab_id: The tab ID to read from (get IDs from zen_tabs)
+    
+    Returns the full visible text content of the specified tab.
+    """
+    return _post("/api/page-text-by-tab-id", {"tabId": tab_id})
 
 
 @mcp.tool()
@@ -213,6 +225,86 @@ def zen_highlight(selector: str) -> dict:
     return _post("/api/highlight", {"selector": selector})
 
 
+# -- Wait ---------------------------------------------------------
+
+@mcp.tool()
+def zen_wait_for_element(selector: str, timeout: int = 10000, poll_interval: int = 200) -> dict:
+    """Wait for a CSS selector to appear and become visible on the page.
+    Returns immediately when the element is found, rather than sleeping a fixed duration.
+    Use this instead of sleep when waiting for dynamic/JS-rendered content.
+
+    Args:
+        selector: CSS selector to wait for (e.g. ".tracking-events", "#results", "[data-loaded]")
+        timeout: Maximum time to wait in milliseconds (default: 10000 = 10s)
+        poll_interval: How often to check in milliseconds (default: 200ms)
+    """
+    timeout_s = (timeout / 1000) + 5  # extra buffer for HTTP round-trip
+    return _post(
+        "/api/wait-for-element",
+        {"selector": selector, "timeout": timeout, "pollInterval": poll_interval},
+        timeout=timeout_s,
+    )
+
+
+# -- WordPress / Elementor ----------------------------------------
+
+@mcp.tool()
+def zen_wp_html(site_url: str, page_id: int) -> dict:
+    """Extract HTML widget content from a WordPress Elementor page.
+
+    Navigates to the Elementor editor for the given page, waits for load,
+    then extracts the innerHTML of all HTML widgets from the Elementor
+    preview iframe. Returns clean HTML/CSS/JS content.
+
+    The browser must already be logged into WP admin for this to work.
+
+    Args:
+        site_url: WordPress site URL (e.g. "https://thankyouexperiences.com")
+        page_id: WordPress page/post ID (e.g. 5719 for Team page)
+    """
+    import time
+    import json as _json
+
+    url = f"{site_url.rstrip('/')}/wp-admin/post.php?post={page_id}&action=elementor"
+
+    # Navigate to Elementor editor
+    nav_result = _post("/api/navigate", {"url": url})
+    if "error" in nav_result:
+        return nav_result
+
+    # Wait for Elementor to load
+    time.sleep(6)
+
+    # Extract HTML widget content from iframe
+    js_code = """
+    (function() {
+        const iframe = document.querySelector('#elementor-preview-iframe');
+        if (!iframe) return JSON.stringify({error: 'No Elementor preview iframe found.'});
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!iframeDoc) return JSON.stringify({error: 'Cannot access iframe document.'});
+        const widgets = iframeDoc.querySelectorAll('[data-widget_type="html.default"]');
+        if (widgets.length === 0) return JSON.stringify({error: 'No HTML widgets found on this page.'});
+        const results = [];
+        for (const widget of widgets) {
+            const dataId = widget.getAttribute('data-id');
+            const container = widget.querySelector('.elementor-html');
+            const content = container ? container.innerHTML : widget.innerHTML;
+            results.push({widget_id: dataId, content: content.trim()});
+        }
+        return JSON.stringify({ok: true, page_id: %PAGE_ID%, widget_count: results.length, widgets: results});
+    })();
+    """.replace("%PAGE_ID%", str(page_id))
+
+    result = _post("/api/js", {"code": js_code})
+
+    if "result" in result:
+        try:
+            parsed = _json.loads(result["result"])
+            return parsed
+        except (_json.JSONDecodeError, TypeError):
+            return result
+    return result
+
 # -- Batch --------------------------------------------------------
 
 @mcp.tool()
@@ -222,12 +314,18 @@ def zen_batch(commands: list[dict]) -> dict:
     Each command is a dict with "action" and parameters.
     Available actions: navigate, newTab, closeTab, switchTab, click, type,
     fill, scroll, hover, find, js, pageInfo, pageText, screenshot, tabs,
-    forms, dom, sleep
+    forms, dom, sleep, waitForElement, pageTextByTabId
 
     Args:
-        commands: List of command dicts, e.g. [{"action": "navigate", "url": "..."}, {"action": "sleep", "ms": 2000}, {"action": "click", "selector": "#btn"}]
+        commands: List of command dicts, e.g. [{"action": "navigate", "url": "..."}, {"action": "waitForElement", "selector": ".results", "timeout": 10000}, {"action": "pageText"}]
     """
-    return _post("/api/batch", {"commands": commands})
+    # Use a generous timeout to accommodate waitForElement commands
+    max_timeout = 15
+    for cmd in commands:
+        if cmd.get("action") == "waitForElement":
+            ms = cmd.get("timeout", 10000)
+            max_timeout = max(max_timeout, (ms / 1000) + 10)
+    return _post("/api/batch", {"commands": commands}, timeout=max_timeout)
 
 
 def main():
