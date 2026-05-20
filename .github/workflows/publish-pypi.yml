@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Publish to PyPI and MCP Registry
 
 on:
   release:
@@ -7,18 +7,54 @@ on:
 
 jobs:
   publish:
-    name: Build and publish via Trusted Publisher
+    name: Build → PyPI Trusted Publisher → MCP Registry
     runs-on: ubuntu-latest
     permissions:
-      id-token: write   # required for PyPI Trusted Publishing (OIDC)
+      id-token: write   # required for PyPI Trusted Publishing AND mcp-publisher github-oidc auth
+      contents: read
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+
       - name: Install build
         run: python -m pip install --upgrade pip build
+
       - name: Build sdist + wheel
         run: python -m build
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Wait for PyPI to surface the new version
+        run: |
+          set -euo pipefail
+          VERSION=$(python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "Waiting for zenlink-mcp $VERSION to appear on PyPI..."
+          for i in $(seq 1 60); do
+            if curl -sf "https://pypi.org/pypi/zenlink-mcp/$VERSION/json" > /dev/null; then
+              echo "✓ Visible on PyPI after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "✗ PyPI never surfaced $VERSION within 60s"
+          exit 1
+
+      - name: Download mcp-publisher
+        run: |
+          set -euo pipefail
+          curl -fsSL -o mcp-publisher.tar.gz \
+            https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz
+          tar xzf mcp-publisher.tar.gz
+          chmod +x mcp-publisher
+          ./mcp-publisher --help | head -3
+
+      - name: Publish to MCP Registry
+        run: |
+          set -euo pipefail
+          ./mcp-publisher login github-oidc
+          cp .mcp/server.json server.json
+          ./mcp-publisher publish

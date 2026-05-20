@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.2
+
+- CI: `publish-pypi.yml` now also publishes to MCP Registry after PyPI succeeds,
+  using `mcp-publisher login github-oidc` for token-free auth. One `gh release create`
+  now updates GitHub + PyPI + MCP Registry.
+- No code changes from 2.0.1.
+
 ## 2.0.1
 
 - Added `mcp-name` ownership marker in README for MCP Registry validation.
