@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+- Added `mcp-name` ownership marker in README for MCP Registry validation.
+- No functional code changes from 2.0.0.
+
 ## 2.0.0 — Parallel agentic work
 
 Major release. ~50 new MCP tools focused on parallel multi-tab work,

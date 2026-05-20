@@ -112,3 +112,5 @@ See [CHANGELOG.md](CHANGELOG.md) for the full history. Highlights of v2.0.0:
 
 - [ZenLink Bridge & Extension](https://github.com/JayQuan-McCleary/ZenLink)
 - [MCP Registry](https://registry.modelcontextprotocol.io)
+
+<sub>mcp-name: io.github.JayQuan-McCleary/zenlink-mcp</sub>
