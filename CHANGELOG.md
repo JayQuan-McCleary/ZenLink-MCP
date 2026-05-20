@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.3
+
+- Version alignment release for ZenLink browser extension/bridge v2.0.3.
+- Updates package and MCP Registry metadata to point at `zenlink-mcp` 2.0.3.
+- No MCP server code changes from 2.0.2.
+
 ## 2.0.2
 
 - CI: `publish-pypi.yml` now also publishes to MCP Registry after PyPI succeeds,
