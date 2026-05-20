@@ -9,3 +9,8 @@ build/
 .mcpregistry_*
 mcp-publisher*
 server.json
+
+# Local agent config
+.claude/
+CLAUDE.md
+release-notes-*.md
