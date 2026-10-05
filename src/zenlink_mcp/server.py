@@ -160,34 +160,48 @@ def zen_screenshot() -> dict:
 # -- Navigation ---------------------------------------------------
 
 @mcp.tool()
-def zen_navigate(url: str, tab_id: int | None = None) -> dict:
+def zen_navigate(url: str, tab_id: int | None = None, raw: bool = False) -> dict:
     """Navigate the active tab to a URL.
 
     Args:
         url: The URL to navigate to (e.g. "https://example.com")
         tab_id: Optional tab to navigate. Defaults to active tab.
+        raw: Bare image URLs (.jpg/.png/...) open inside a small local viewer page
+             (image = #zlimg) so the extension can still script them. True opens the raw image.
     """
-    return _post("/api/navigate", _with_tab({"url": url}, tab_id))
+    body = {"url": url}
+    if raw:
+        body["raw"] = True
+    return _post("/api/navigate", _with_tab(body, tab_id))
 
 
 @mcp.tool()
-def zen_new_tab(url: str = "about:blank") -> dict:
+def zen_new_tab(url: str = "about:blank", raw: bool = False) -> dict:
     """Open a new browser tab.
 
     Args:
         url: URL to open in the new tab (default: blank page)
+        raw: Bare image URLs open inside a local viewer page (image = #zlimg) unless raw=True.
     """
-    return _post("/api/new-tab", {"url": url})
+    body = {"url": url}
+    if raw:
+        body["raw"] = True
+    return _post("/api/new-tab", body)
 
 
 @mcp.tool()
-def zen_close_tab(tab_id: int) -> dict:
+def zen_close_tab(tab_id: int, force: bool = False) -> dict:
     """Close a browser tab by its ID.
 
     Args:
         tab_id: The tab ID to close (get IDs from zen_tabs)
+        force: Disarm "Leave page?" (beforeunload) prompts first - upload/editor pages
+               otherwise hold the tab open and the close times out.
     """
-    return _post("/api/close-tab", {"tabId": tab_id})
+    body = {"tabId": tab_id}
+    if force:
+        body["force"] = True
+    return _post("/api/close-tab", body)
 
 
 @mcp.tool()
@@ -332,14 +346,20 @@ def zen_find(query: str, tab_id: int | None = None) -> dict:
 
 
 @mcp.tool()
-def zen_js(code: str, tab_id: int | None = None) -> dict:
+def zen_js(code: str, tab_id: int | None = None, full: bool = False) -> dict:
     """Execute JavaScript in the current page context.
 
     Args:
         code: JavaScript code to run (e.g. "document.title" or "document.querySelectorAll('a').length")
         tab_id: Optional tab to target. Defaults to active tab.
+        full: Results are capped at 8 MB (50 KB on extensions older than 2.1.0). full=True runs the
+              code once and reads the result back in slices, so any size comes back complete.
     """
-    return _post("/api/js", _with_tab({"code": code}, tab_id))
+    body = {"code": code}
+    if full:
+        body["full"] = True
+        return _post("/api/js", _with_tab(body, tab_id), timeout=180)
+    return _post("/api/js", _with_tab(body, tab_id))
 
 
 @mcp.tool()
@@ -755,6 +775,31 @@ def zen_click_and_wait_navigation(
 # ════════════════════════════════════════════════════════════════════
 #  1.4.0 — Visual additions
 # ════════════════════════════════════════════════════════════════════
+
+@mcp.tool()
+def zen_upload_file(path: str | list[str], selector: str | None = None, mode: str = "auto",
+                    tab_id: int | None = None) -> dict:
+    """Attach local file(s) to a page's upload control - no OS file dialog.
+
+    The bridge reads the file from disk and streams it into the page, which builds
+    real File objects and sets them on the <input type=file> (firing input + change).
+    If the selector is a drop zone with no input inside, it fires dragenter/dragover/drop.
+
+    Args:
+        path: absolute file path, or a list of paths for multi-file inputs.
+        selector: the file input, an element containing it, or a drop zone.
+                  Omit to use the first input[type=file] on the page.
+        mode: "auto" (input if found, else drop), "input", or "drop".
+        tab_id: target tab (default: active). Pass it for anything big - the upload
+                streams in ~384 KB chunks and must keep hitting the same tab.
+
+    Returns {ok, mode, files: [{name, size, type}], chunks, bytes, transport, seconds}.
+    """
+    body = {"paths": path if isinstance(path, list) else [path], "mode": mode}
+    if selector:
+        body["selector"] = selector
+    return _post("/api/upload-file", _with_tab(body, tab_id), timeout=320)
+
 
 @mcp.tool()
 def zen_element_screenshot(selector: str, tab_id: int | None = None) -> dict:
@@ -1214,6 +1259,16 @@ def zen_audit(limit: int = 100, since_ms: int = 0) -> dict:
     """Return recent command audit entries: action, params (JS code stripped),
     success flag, error, duration. Useful for "what did the agent do?" reviews."""
     return _post("/api/audit", {"limit": limit, "since": since_ms})
+
+
+@mcp.tool()
+def zen_scheduler() -> dict:
+    """Return bridge scheduler state for multi-agent/tab work.
+
+    Shows active per-tab/global command scopes, pending WebSocket commands, and
+    known tab locks. Useful when several agents are driving separate tabs.
+    """
+    return _post("/api/scheduler", {})
 
 
 @mcp.tool()

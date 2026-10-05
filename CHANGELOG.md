@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.0
+
+Pairs with ZenLink browser extension + bridge v2.1.0.
+
+- Added `zen_upload_file`: attach local files (any size, up to 1 GB) to a page's file input or drop zone without
+  the OS file picker. Files arrive as page-side File objects, so strict uploaders accept them.
+- Added `zen_scheduler` to inspect the bridge scheduler during multi-agent, multi-tab work.
+- `zen_js(full=True)` returns results of any size (the extension cap is now 8 MB, was 50 KB).
+- `zen_close_tab(force=True)` disarms "Leave page?" prompts before closing.
+- `zen_new_tab` / `zen_navigate` `raw` flag: bare image URLs now open in a local viewer page by default.
+
 ## 2.0.3
 
 - Version alignment release for ZenLink browser extension/bridge v2.0.3.
