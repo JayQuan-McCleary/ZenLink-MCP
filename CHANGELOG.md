@@ -3,9 +3,10 @@
 ## 2.1.1
 
 - Same tool surface as 2.1.0. Pinned `hatchling<1.28` so wheels carry Metadata-Version 2.4 - the pinned
-  `pypa/gh-action-pypi-publish` rejected 2.5, so 2.1.0 never reached PyPI / the MCP Registry.
+  `pypa/gh-action-pypi-publish` rejected 2.5, so 2.1.0 never reached PyPI / the MCP Registry (its GitHub
+  release and tag were removed; 2.1.1 is the first published 2.1 build).
 
-## 2.1.0 (GitHub release only - not on PyPI)
+## 2.1.0 (never published - see 2.1.1)
 
 Pairs with ZenLink browser extension + bridge v2.1.0.
 
