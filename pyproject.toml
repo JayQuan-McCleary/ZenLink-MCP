@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling<1.28"]  # 1.28+ writes Metadata-Version 2.5, which the pinned pypi-publish action rejects
 build-backend = "hatchling.build"
 
 [project]
 name = "zenlink-mcp"
-version = "2.1.0"
+version = "2.1.1"
 description = "MCP server for browser automation via ZenLink - gives Claude Desktop and other MCP clients native browser control."
 readme = "README.md"
 license = "MIT"
