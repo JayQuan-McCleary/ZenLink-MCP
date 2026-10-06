@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 2.1.2
 
+Pairs with ZenLink extension 2.1.1 (bridge 2.1.0).
+
+- `zen_element_screenshot(scale=2)`: sharper captures at twice the CSS size (extension 2.1.1+).
 - `zen_element_screenshot` / `zen_full_page_screenshot` save the PNG and return `saved_to` instead of the
   data URL (a 100K+ character data URL landed straight in the caller's context). `save_to` picks the path,
   `data_url=True` still returns the bytes inline.

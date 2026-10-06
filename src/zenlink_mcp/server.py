@@ -825,7 +825,7 @@ def _save_png(r: dict, prefix: str, save_to: str | None, data_url: bool) -> dict
 
 @mcp.tool()
 def zen_element_screenshot(selector: str, tab_id: int | None = None, save_to: str | None = None,
-                           data_url: bool = False) -> dict:
+                           data_url: bool = False, scale: float = 1) -> dict:
     """Screenshot a single element. Scrolls into view, captures, crops in the
     extension via OffscreenCanvas. Saves a PNG and returns its path (saved_to).
 
@@ -834,8 +834,13 @@ def zen_element_screenshot(selector: str, tab_id: int | None = None, save_to: st
         tab_id: Optional tab to target. Defaults to active tab.
         save_to: Optional file path (default: ~/claude-zen-screenshots/element_<time>.png)
         data_url: Also return the PNG data URL (large - only if you really need the bytes inline)
+        scale: 1-4 output pixels per CSS pixel. 2 = genuinely sharper capture at twice the size
+               (needs extension 2.1.1+; older extensions ignore it)
     """
-    r = _post("/api/element-screenshot", _with_tab({"selector": selector}, tab_id), timeout=30)
+    body = {"selector": selector}
+    if scale and scale != 1:
+        body["scale"] = scale
+    r = _post("/api/element-screenshot", _with_tab(body, tab_id), timeout=45)
     return _save_png(r, "element", save_to, data_url)
 
 
