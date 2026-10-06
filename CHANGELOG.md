@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `zen_element_screenshot` / `zen_full_page_screenshot` save the PNG and return `saved_to` instead of the
+  data URL (a 100K+ character data URL landed straight in the caller's context). `save_to` picks the path,
+  `data_url=True` still returns the bytes inline.
+
 ## 2.1.1
 
 - Same tool surface as 2.1.0. Pinned `hatchling<1.28` so wheels carry Metadata-Version 2.4 - the pinned

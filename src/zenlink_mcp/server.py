@@ -802,17 +802,56 @@ def zen_upload_file(path: str | list[str], selector: str | None = None, mode: st
 
 
 @mcp.tool()
-def zen_element_screenshot(selector: str, tab_id: int | None = None) -> dict:
-    """Screenshot a single element. Scrolls into view, captures, crops in the
-    extension via OffscreenCanvas. Returns a PNG data URL."""
-    return _post("/api/element-screenshot", _with_tab({"selector": selector}, tab_id), timeout=30)
+def _save_png(r: dict, prefix: str, save_to: str | None, data_url: bool) -> dict:
+    """Write the bridge's PNG data URL to a file and return the path instead of the image data.
+    (2.1.2: a returned data URL is ~100K+ characters and blew straight into the caller's context.)"""
+    data = r.get("dataUrl") if isinstance(r, dict) else None
+    if not data or "base64," not in data:
+        return r
+    import base64, os, pathlib, time
+    if save_to:
+        path = pathlib.Path(save_to)
+    else:
+        d = pathlib.Path(os.path.expanduser("~")) / "claude-zen-screenshots"
+        path = d / f"{prefix}_{time.strftime('%Y%m%d_%H%M%S')}.png"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(base64.b64decode(data.split("base64,", 1)[1]))
+    out = {k: v for k, v in r.items() if k != "dataUrl"}
+    out["saved_to"] = str(path)
+    if data_url:
+        out["dataUrl"] = data
+    return out
 
 
 @mcp.tool()
-def zen_full_page_screenshot(tab_id: int | None = None) -> dict:
+def zen_element_screenshot(selector: str, tab_id: int | None = None, save_to: str | None = None,
+                           data_url: bool = False) -> dict:
+    """Screenshot a single element. Scrolls into view, captures, crops in the
+    extension via OffscreenCanvas. Saves a PNG and returns its path (saved_to).
+
+    Args:
+        selector: CSS selector of the element
+        tab_id: Optional tab to target. Defaults to active tab.
+        save_to: Optional file path (default: ~/claude-zen-screenshots/element_<time>.png)
+        data_url: Also return the PNG data URL (large - only if you really need the bytes inline)
+    """
+    r = _post("/api/element-screenshot", _with_tab({"selector": selector}, tab_id), timeout=30)
+    return _save_png(r, "element", save_to, data_url)
+
+
+@mcp.tool()
+def zen_full_page_screenshot(tab_id: int | None = None, save_to: str | None = None,
+                             data_url: bool = False) -> dict:
     """Scroll-and-stitch screenshot covering the full document height (up to
-    30 viewports tall). Returns one PNG data URL of the entire page."""
-    return _post("/api/full-page-screenshot", _with_tab({}, tab_id), timeout=120)
+    30 viewports tall). Saves one PNG of the entire page and returns its path (saved_to).
+
+    Args:
+        tab_id: Optional tab to target. Defaults to active tab.
+        save_to: Optional file path (default: ~/claude-zen-screenshots/fullpage_<time>.png)
+        data_url: Also return the PNG data URL (large)
+    """
+    r = _post("/api/full-page-screenshot", _with_tab({}, tab_id), timeout=120)
+    return _save_png(r, "fullpage", save_to, data_url)
 
 
 @mcp.tool()
