@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.3
+
+Pairs with ZenLink bridge 2.1.2.
+
+- `zen_trusted_click` hits the right spot on zoomed pages. The fix lives in the bridge, so update it to 2.1.2.
+  The docstring now lists the result fields that tell you whether the click landed (`ok`, `clicked`,
+  `verified`, `landed`, `elementAtPoint`, `hit`, `windowAtPoint`).
+- New `zen_trusted_click` options: `verify=False` skips the post-click read-back, and `check_window=False` skips
+  the check that the browser window is the one under the point. Older bridges ignore both.
+
 ## 2.1.2
 
 Pairs with ZenLink extension 2.1.1 (bridge 2.1.0).

@@ -238,24 +238,45 @@ def zen_trusted_click(
     coordinate_space: str = "viewport",
     focus: bool = False,
     tab_id: int | None = None,
+    verify: bool = True,
+    check_window: bool = True,
 ) -> dict:
     """Click using the real OS mouse pointer for pages that reject synthetic DOM events.
 
     This is slower and moves the user's cursor, so prefer zen_click unless a page
-    specifically ignores synthetic clicks.
+    specifically ignores synthetic clicks. The tab must be the visible tab in its window.
+
+    Viewport points are mapped to physical screen pixels with devicePixelRatio, so zoomed
+    pages (80%, 125%, ...) are hit correctly (bridge 2.1.2+).
+
+    Check `ok`, not just the absence of an exception: `ok` is false when the click was not
+    sent (`clicked: false` - the tab is hidden, or another window covers the point) or when
+    the page reported that it landed somewhere else (`verified: false`). Useful fields:
+    `screenX`/`screenY` (physical px clicked), `elementAtPoint` and `hit` (what was under the
+    point before the click), `landed` (element and client point the page actually received,
+    with `dx`/`dy` from the intended point), `verified` (true / false / null when unknowable,
+    e.g. the click navigated away or the point is over an iframe), `windowAtPoint`.
 
     Args:
         selector: CSS selector to click. If provided, ZenLink clicks its center.
         x: X coordinate, used if selector is empty.
         y: Y coordinate, used if selector is empty.
-        coordinate_space: "viewport" for browser viewport coords or "screen" for desktop coords.
-        focus: Whether to try to foreground the browser first. Defaults to false.
+        coordinate_space: "viewport" for browser viewport CSS px, or "screen" for physical
+            desktop pixels (screen clicks are not checked against the page).
+        focus: Bring the browser window to the front before clicking. Defaults to false.
         tab_id: Optional tab to resolve the selector against (viewport coords only).
+        verify: Read back what the page received after the click (~100 ms). Defaults to true.
+        check_window: Refuse to click when the window under the point is not the browser
+            window showing this tab. Defaults to true.
     """
     if selector:
         body = {"selector": selector, "focus": focus}
     else:
         body = {"coords": {"x": x, "y": y}, "coordinateSpace": coordinate_space, "focus": focus}
+    if not verify:
+        body["verify"] = False
+    if not check_window:
+        body["checkWindow"] = False
     return _post("/api/trusted-click", _with_tab(body, tab_id))
 
 
